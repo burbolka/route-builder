@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30204.135
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RouteBuilder.Common", "RouteBuilder.Common\RouteBuilder.Common.csproj", "{AE2DC2AC-0631-4F71-8A39-D5A805CE9693}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{950CCB0C-3BB0-4638-9B5F-05EEE8B72C37}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RouteBuilder.Services.DroneFinder", "RouteBuilder.Services.DroneFinder\RouteBuilder.Services.DroneFinder.csproj", "{AE6E409B-98DD-43A1-8A2F-897A8E2A1F06}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteBuilder.Services.StoreFinder", "RouteBuilder.Services.StoreFinder\RouteBuilder.Services.StoreFinder.csproj", "{E995417E-6565-4049-8CFE-81AB2508E302}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteBuilder.Services.LocationFinder", "LocationFinder\RouteBuilder.Services.LocationFinder.csproj", "{24DA6F68-597F-4A5F-87F0-70FEAB191ACF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RouteBuilder.Web", "RouteBilder.Web\RouteBuilder.Web.csproj", "{7E0D2370-A5E6-4D9B-BC64-65FD8331064F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AE2DC2AC-0631-4F71-8A39-D5A805CE9693}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE2DC2AC-0631-4F71-8A39-D5A805CE9693}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE2DC2AC-0631-4F71-8A39-D5A805CE9693}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE2DC2AC-0631-4F71-8A39-D5A805CE9693}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE6E409B-98DD-43A1-8A2F-897A8E2A1F06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE6E409B-98DD-43A1-8A2F-897A8E2A1F06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE6E409B-98DD-43A1-8A2F-897A8E2A1F06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE6E409B-98DD-43A1-8A2F-897A8E2A1F06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E995417E-6565-4049-8CFE-81AB2508E302}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E995417E-6565-4049-8CFE-81AB2508E302}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E995417E-6565-4049-8CFE-81AB2508E302}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E995417E-6565-4049-8CFE-81AB2508E302}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24DA6F68-597F-4A5F-87F0-70FEAB191ACF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24DA6F68-597F-4A5F-87F0-70FEAB191ACF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24DA6F68-597F-4A5F-87F0-70FEAB191ACF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24DA6F68-597F-4A5F-87F0-70FEAB191ACF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E0D2370-A5E6-4D9B-BC64-65FD8331064F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E0D2370-A5E6-4D9B-BC64-65FD8331064F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E0D2370-A5E6-4D9B-BC64-65FD8331064F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E0D2370-A5E6-4D9B-BC64-65FD8331064F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{AE6E409B-98DD-43A1-8A2F-897A8E2A1F06} = {950CCB0C-3BB0-4638-9B5F-05EEE8B72C37}
+		{E995417E-6565-4049-8CFE-81AB2508E302} = {950CCB0C-3BB0-4638-9B5F-05EEE8B72C37}
+		{24DA6F68-597F-4A5F-87F0-70FEAB191ACF} = {950CCB0C-3BB0-4638-9B5F-05EEE8B72C37}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CC7D51BE-489C-4F81-BEDF-8472AB78D096}
+	EndGlobalSection
+EndGlobal
