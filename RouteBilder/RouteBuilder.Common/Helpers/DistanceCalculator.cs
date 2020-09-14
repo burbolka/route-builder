@@ -38,8 +38,8 @@ namespace RouteBuilder.Common.Helpers
         /// </returns>
         public double Calculate(IAddressCoordinates address1, IAddressCoordinates address2)
         {
-            var arg1 = Math.Pow(Math.Sin((address2.Latitude - address1.Latitude) / 2), 2);
-            var arg2 = Math.Pow(Math.Sin((address2.Longitude - address1.Longitude) / 2), 2);
+            var arg1 = Math.Pow(Math.Sin((address2.Latitude - address1.Latitude) * 0.5), 2);
+            var arg2 = Math.Pow(Math.Sin((address2.Longitude - address1.Longitude) * 0.5), 2);
             var argSqrt = Math.Sqrt(arg1 + (Math.Cos(address2.Latitude) * Math.Cos(address1.Latitude) * arg2));
 
             var result = 2d * EarthRadius * Math.Asin(argSqrt);
