@@ -58,7 +58,7 @@ namespace RouteBuilder.Services.StoreFinder
         /// <returns>
         /// The <see cref="IEnumerable{IAddressItem}"/>.
         /// </returns>
-        public async Task<IEnumerable<IAddressItem>> GetStoresToServe()
+        public IEnumerable<IAddressItem> GetStoresToServe()
         {
             try
             {

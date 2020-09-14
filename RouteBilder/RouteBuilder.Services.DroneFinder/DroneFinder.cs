@@ -14,7 +14,6 @@ namespace RouteBuilder.Services.DroneFinder
     using System.Linq;
     using System.Threading.Tasks;
 
-    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
@@ -53,7 +52,13 @@ namespace RouteBuilder.Services.DroneFinder
             this.logger = logger;
         }
 
-        public async Task<IEnumerable<IAddressItem>> GetDroneFleets()
+        /// <summary>
+        /// The get drone fleets.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
+        /// </returns>
+        public IEnumerable<IAddressItem> GetDroneFleets()
         {
             try
             {
@@ -75,9 +80,9 @@ namespace RouteBuilder.Services.DroneFinder
         /// The get available drones.
         /// </summary>
         /// <returns>
-        /// The <see cref="IEnumerable{T}"/>.
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
         /// </returns>
-        public async Task<IEnumerable<IAddressItem>> GetAvailableDrones()
+        public IEnumerable<IAddressItem> GetAvailableDrones()
         {
             try
             {

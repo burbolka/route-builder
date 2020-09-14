@@ -59,11 +59,10 @@ namespace RouteBuilder.Services.LocationFinder
         /// The address line.
         /// </param>
         /// <returns>
-        /// The <see cref="Task"/>.
+        /// The <see cref="IAddressItem"/>
+        /// address item
         /// </returns>
-        /// <exception cref="NotImplementedException">
-        /// </exception>
-        public async Task<IAddressItem> GetAddressCoordinates(string addressLine)
+        public IAddressItem GetAddressCoordinates(string addressLine)
         {
             try
             {
@@ -95,11 +94,9 @@ namespace RouteBuilder.Services.LocationFinder
         /// The address line.
         /// </param>
         /// <returns>
-        /// The <see cref="Task"/>.
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
         /// </returns>
-        /// <exception cref="NotImplementedException">
-        /// </exception>
-        public async Task<IEnumerable<IAddressItem>> GetAddressCoordinates(IEnumerable<string> addressLine)
+        public IEnumerable<IAddressItem> GetAddressCoordinates(IEnumerable<string> addressLine)
         {
             try
             {

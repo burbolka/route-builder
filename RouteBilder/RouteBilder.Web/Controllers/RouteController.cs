@@ -12,6 +12,7 @@ namespace RouteBuilder.Web.Controllers
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Security.Cryptography.X509Certificates;
     using System.Threading.Tasks;
 
     using Microsoft.AspNetCore.Mvc;
@@ -87,64 +88,89 @@ namespace RouteBuilder.Web.Controllers
         [Route("GetForAll")]
         public async Task<IActionResult> GetForAll()
         {
-            // get stores
-            var stores = (await this.storeFinder.GetStoresToServe()).ToList();
-            var fleets = (await this.droneService.GetDroneFleets()).ToList();
-            var clientAddresses = this.clientLocations.Value;
-
-            if (!stores.AnySafe() || !fleets.AnySafe() || !clientAddresses.AnySafe())
+            var resultTask = Task<List<RouteSettings>>.Factory.StartNew(() =>
             {
-                return this.Ok("cannot build route");
-            }
+                // get stores
+                var stores = this.storeFinder.GetStoresToServe().ToList();
+                var fleets = this.droneService.GetDroneFleets().ToList();
+                var clientAddresses = clientLocations.Value;
 
-            var result = new List<RouteSettings>();
-            var calc = new DistanceCalculator();
+                var result = new List<RouteSettings>();
 
-            var fleetStoreDistance = new List<RouteDistance>();
-            foreach (var fleet in fleets)
-            {
-                foreach (var store in stores)
+                if (!stores.AnySafe() || !fleets.AnySafe() || !clientAddresses.AnySafe())
                 {
-                    fleetStoreDistance.Add(new RouteDistance
-                                               {
-                                                   LocationFrom = fleet.AddressLine,
-                                                   LocationFromAddress = fleet,
-                                                   LocationTo = store.AddressLine,
-                                                   LocationToAddress = store,
-                                                   Distance = calc.Calculate(fleet.Coordinates, store.Coordinates)
-                                               });
+                    return result;
                 }
-            }
 
-            // get distance from client to store
-            var storeToClientDistances = new LinkedList<RouteDistance>();
-            foreach (var client in clientAddresses)
-            {
-                foreach (var store in stores)
+                var calc = new DistanceCalculator();
+
+                var fleetStoreDistance = new List<RouteDistance>();
+                foreach (var fleet in fleets)
                 {
-                    storeToClientDistances.AddLast(
-                        new RouteDistance
+                    foreach (var store in stores)
+                    {
+                        fleetStoreDistance.Add(new RouteDistance
+                        {
+                            LocationFrom = fleet.AddressLine,
+                            LocationFromAddress = fleet,
+                            LocationTo = store.AddressLine,
+                            LocationToAddress = store,
+                            Distance = calc.Calculate(fleet.Coordinates, store.Coordinates)
+                        });
+                    }
+                }
+
+                // get distance from client to store
+                var storeToClientDistances = new LinkedList<RouteDistance>();
+                foreach (var client in clientAddresses)
+                {
+                    foreach (var store in stores)
+                    {
+                        storeToClientDistances.AddLast(
+                            new RouteDistance
                             {
                                 LocationFrom = store.AddressLine,
                                 LocationFromAddress =
-                                    new Address { AddressLine = store.AddressLine, Coordinates = store.Coordinates },
+                                        new Address { AddressLine = store.AddressLine, Coordinates = store.Coordinates },
                                 LocationTo = client.AddressLine,
                                 LocationToAddress =
-                                    new Address { AddressLine = client.AddressLine, Coordinates = client.Coordinates },
+                                        new Address { AddressLine = client.AddressLine, Coordinates = client.Coordinates },
                                 Distance = calc.Calculate(client.Coordinates, store.Coordinates)
                             });
+                    }
+
+                    var availableDrones = this.droneService.GetAvailableDrones();
+                    var nearestStore = storeToClientDistances.OrderBy(x => x.Distance).FirstOrDefault();
+
+                    var nearestFleet = fleetStoreDistance
+                        .Where(x => x.LocationTo.Equals(nearestStore.LocationFrom, StringComparison.InvariantCultureIgnoreCase))
+                        .OrderBy(x => x.Distance)
+                        .FirstOrDefault();
+
+                    var availableDroneNearby = availableDrones.FirstOrDefault(x => x.AddressLine.Equals(
+                        nearestFleet.LocationFrom,
+                        StringComparison.InvariantCultureIgnoreCase));
+
+                    if (availableDroneNearby == null)
+                    {
+                        var availableDronesDistance = fleetStoreDistance
+                            .Where(x => !x.LocationFrom.Equals(nearestFleet.LocationFrom, StringComparison.InvariantCultureIgnoreCase))
+                            .ToList();
+
+                        nearestFleet = availableDronesDistance
+                            .OrderBy(x => x.Distance)
+                            .FirstOrDefault();
+                    }
+
+                    result.Add(this.BuildRouteSettings(calc, nearestFleet, nearestStore));
+
+                    storeToClientDistances.Clear();
                 }
 
-                var nearestStore = storeToClientDistances.OrderBy(x => x.Distance).FirstOrDefault();
-                var nearestFleet = fleetStoreDistance.FirstOrDefault(
-                    x => x.LocationTo.Equals(nearestStore.LocationFrom, StringComparison.InvariantCultureIgnoreCase));
-
-                result.Add(this.BuildRouteSettings(calc, nearestFleet, nearestStore));
-
-                storeToClientDistances.Clear();
-            }
-
-            return this.Ok(result);
+                return result;
+            });
+            
+            return this.Ok(await resultTask);
         }
 
         /// <summary>
@@ -159,58 +185,67 @@ namespace RouteBuilder.Web.Controllers
         [Route("Get/{address}")]
         public async Task<IActionResult> Get(string address)
         {
-            // get stores
-            var stores = (await this.storeFinder.GetStoresToServe()).ToList();
-            var drones = (await this.droneService.GetAvailableDrones()).ToList();
-
-            var clientAddress = await this.locationFinder.GetAddressCoordinates(address);
-
-            if (!stores.AnySafe() || !drones.AnySafe() || clientAddress == null)
-            {
-                return this.Ok("cannot build route");
-            }
-
-            var calc = new DistanceCalculator();
-
-            var storeClientDistance = new List<RouteDistance>();
-            foreach (var store in stores)
-            {
-                storeClientDistance.Add(new RouteDistance
-                                            {
-                                                LocationFrom = store.AddressLine,
-                                                LocationFromAddress = store,
-                                                LocationTo = clientAddress.AddressLine,
-                                                LocationToAddress = clientAddress,
-                                                Distance = calc.Calculate(store.Coordinates, clientAddress.Coordinates)
-                                            });
-            }
-
-            var nearestStore = storeClientDistance.OrderBy(x => x.Distance).FirstOrDefault();
-
-            var droneStoreDistance = new List<RouteDistance>();
-            foreach (var fleet in drones)
-            {
-                foreach (var store in stores)
-                {
-                    if (store.AddressLine.Equals(nearestStore.LocationFrom, StringComparison.InvariantCultureIgnoreCase))
+            var resultTask = Task<RouteSettings>.Factory.StartNew(
+                () =>
                     {
-                        droneStoreDistance.Add(
-                            new RouteDistance
+                        // get stores
+                        var stores = this.storeFinder.GetStoresToServe().ToList();
+                        var drones = this.droneService.GetAvailableDrones().ToList();
+
+                        var clientAddress = this.locationFinder.GetAddressCoordinates(address);
+
+                        if (!stores.AnySafe() || !drones.AnySafe() || clientAddress == null)
+                        {
+                            return null;
+                        }
+
+                        var calc = new DistanceCalculator();
+
+                        var storeClientDistance = new List<RouteDistance>();
+                        foreach (var store in stores)
+                        {
+                            storeClientDistance.Add(new RouteDistance
+                            {
+                                LocationFrom = store.AddressLine,
+                                LocationFromAddress = store,
+                                LocationTo = clientAddress.AddressLine,
+                                LocationToAddress = clientAddress,
+                                Distance = calc.Calculate(store.Coordinates, clientAddress.Coordinates)
+                            });
+                        }
+
+                        var nearestStore = storeClientDistance.OrderBy(x => x.Distance).FirstOrDefault();
+
+                        var droneStoreDistance = new List<RouteDistance>();
+                        foreach (var fleet in drones)
+                        {
+                            foreach (var store in stores)
+                            {
+                                if (store.AddressLine.Equals(nearestStore.LocationFrom, StringComparison.InvariantCultureIgnoreCase))
                                 {
-                                    LocationFrom = fleet.AddressLine,
-                                    LocationFromAddress = fleet,
-                                    LocationTo = store.AddressLine,
-                                    LocationToAddress = store,
-                                    Distance = calc.Calculate(fleet.Coordinates, store.Coordinates)
-                                });
-                        break;
-                    }
-                }
-            }
+                                    droneStoreDistance.Add(
+                                        new RouteDistance
+                                        {
+                                            LocationFrom = fleet.AddressLine,
+                                            LocationFromAddress = fleet,
+                                            LocationTo = store.AddressLine,
+                                            LocationToAddress = store,
+                                            Distance = calc.Calculate(fleet.Coordinates, store.Coordinates)
+                                        });
+                                    break;
+                                }
+                            }
+                        }
 
-            var nearestFleet = droneStoreDistance.OrderBy(x => x.Distance).FirstOrDefault();
+                        var nearestFleet = droneStoreDistance
+                            .Where(x => x.LocationTo.Equals(nearestStore.LocationFrom, StringComparison.CurrentCultureIgnoreCase))
+                            .OrderBy(x => x.Distance)
+                            .FirstOrDefault();
 
-            return this.Ok(this.BuildRouteSettings(calc, nearestFleet, nearestStore));
+                        return this.BuildRouteSettings(calc, nearestFleet, nearestStore);
+                    });
+
+            return this.Ok(await resultTask);
         }
 
         /// <summary>

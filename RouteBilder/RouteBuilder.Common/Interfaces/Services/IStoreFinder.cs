@@ -25,6 +25,6 @@ namespace RouteBuilder.Common.Interfaces.Services
         /// <returns>
         /// The <see cref="IEnumerable{IAddressItem}"/>.
         /// </returns>
-        Task<IEnumerable<IAddressItem>> GetStoresToServe();
+        IEnumerable<IAddressItem> GetStoresToServe();
     }
 }

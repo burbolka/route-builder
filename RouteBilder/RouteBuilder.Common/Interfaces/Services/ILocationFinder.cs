@@ -28,7 +28,7 @@ namespace RouteBuilder.Common.Interfaces.Services
         /// <returns>
         /// The <see cref="Task"/>.
         /// </returns>
-        Task<IAddressItem> GetAddressCoordinates(string addressLine);
+        IAddressItem GetAddressCoordinates(string addressLine);
 
         /// <summary>
         /// The get address coordinates.
@@ -39,6 +39,6 @@ namespace RouteBuilder.Common.Interfaces.Services
         /// <returns>
         /// The <see cref="Task"/>.
         /// </returns>
-        Task<IEnumerable<IAddressItem>> GetAddressCoordinates(IEnumerable<string> addressLine);
+        IEnumerable<IAddressItem> GetAddressCoordinates(IEnumerable<string> addressLine);
     }
 }
