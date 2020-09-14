@@ -121,6 +121,7 @@ namespace RouteBuilder.Web.Controllers
 
                 var ways = new List<BestWay>();
                 var distance = new List<double>();
+                var bestWay = new BestWay();
                 foreach (var client in clientAddresses)
                 {
                     distance.Clear();
@@ -129,22 +130,33 @@ namespace RouteBuilder.Web.Controllers
                         distance.Add(calc.Calculate(client.Coordinates, store.Coordinates));
                     }
 
-                    var bestWay = new BestWay
-                                      {
-                                          Distance = distance[0] + fleetStoreDistanceArr[0][0],
-                                          FleetIndex = 0,
-                                          StoreIndex = 0,
-                                          Client = client
-                                      };
+                    bestWay = new BestWay
+                    {
+                        Distance = double.MaxValue,
+                        FleetIndex = 0,
+                        StoreIndex = 0,
+                        Client = client
+                    };
+
+                    var availableDrones = this.droneService.GetAvailableDrones().ToList();
+
                     for (var i = 0; i < fleetStoreDistanceArr.Count; i++)
                     {
-                        for (var j = 0; j < fleetStoreDistanceArr[i].Count; j++)
+                        // for loop bellow fleetStoreDistanceArr line length will be the same for all lines,
+                        // so we don't need to calculate it for every line
+                        for (var j = 0; j < fleetStoreDistanceArr[0].Count; j++)
                         {
-                            if (fleetStoreDistanceArr[i][j] + distance[j] < bestWay.Distance)
+                            if (availableDrones.Exists(
+                                x => x.AddressLine.Equals(
+                                    fleets[i].AddressLine,
+                                    StringComparison.InvariantCultureIgnoreCase)))
                             {
-                                bestWay.Distance = fleetStoreDistanceArr[i][j] + distance[j];
-                                bestWay.FleetIndex = i;
-                                bestWay.StoreIndex = j;
+                                if (fleetStoreDistanceArr[i][j] + distance[j] < bestWay.Distance)
+                                {
+                                    bestWay.Distance = fleetStoreDistanceArr[i][j] + distance[j];
+                                    bestWay.FleetIndex = i;
+                                    bestWay.StoreIndex = j;
+                                }
                             }
                         }
                     }
