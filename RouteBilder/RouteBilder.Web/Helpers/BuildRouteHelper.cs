@@ -56,5 +56,49 @@ namespace RouteBuilder.Web.Helpers
 
             return result;
         }
+
+        /// <summary>
+        /// The build route settings.
+        /// </summary>
+        /// <param name="calc">
+        /// The calc.
+        /// </param>
+        /// <param name="fleetToStore">
+        /// The fleet to store.
+        /// </param>
+        /// <param name="storeToClient">
+        /// The store to client.
+        /// </param>
+        /// <param name="distanceToClient">
+        /// The distance to client.
+        /// </param>
+        /// <returns>
+        /// The <see cref="RouteSettings"/>.
+        /// </returns>
+        public static RouteSettings BuildRouteSettings(
+            DistanceCalculator calc,
+            RouteDistance fleetToStore,
+            RouteDistance storeToClient,
+            double distanceToClient)
+        {
+            var result = new RouteSettings();
+
+            result.ClientLocation = storeToClient.LocationToAddress;
+            result.StoreLocation = storeToClient.LocationFromAddress;
+            result.DroneLocation = fleetToStore.LocationFromAddress;
+
+            result.DistanceToClient = distanceToClient;
+            result.DroneFlyDistance = result.DistanceToClient + calc.Calculate(
+                                          result.ClientLocation.Coordinates,
+                                          result.DroneLocation.Coordinates);
+
+            result.ClientWaitingTimeSec = (result.DistanceToClient * 1000) / 16.6667d;
+            result.DroneFlyTimeSec = (result.DroneFlyDistance * 1000) / 16.6667d;
+
+            result.ClientWaitingTimeMin = result.ClientWaitingTimeSec / 60;
+            result.DroneFlyTimeMin = result.DroneFlyTimeSec / 60;
+
+            return result;
+        }
     }
 }

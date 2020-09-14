@@ -115,5 +115,30 @@ namespace RouteBuilder.Services.LocationFinder
 
             return Enumerable.Empty<IAddressItem>();
         }
+
+        /// <summary>
+        /// The get all client location.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
+        /// </returns>
+        public IEnumerable<IAddressItem> GetAllClientLocation()
+        {
+            try
+            {
+                var availableStores = this.settings.Value;
+                if (availableStores.AnySafe())
+                {
+                    return availableStores.Select(
+                        x => new AddressItem { AddressLine = x.AddressLine, Coordinates = x.Coordinates });
+                }
+            }
+            catch (Exception e)
+            {
+                this.logger.Log(LogLevel.Error, "something went wrong when try get stores", e);
+            }
+
+            return Enumerable.Empty<IAddressItem>();
+        }
     }
 }

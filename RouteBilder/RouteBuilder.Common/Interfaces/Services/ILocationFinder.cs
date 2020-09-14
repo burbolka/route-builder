@@ -40,5 +40,13 @@ namespace RouteBuilder.Common.Interfaces.Services
         /// The <see cref="Task"/>.
         /// </returns>
         IEnumerable<IAddressItem> GetAddressCoordinates(IEnumerable<string> addressLine);
+
+        /// <summary>
+        /// The get all client location.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
+        /// </returns>
+        IEnumerable<IAddressItem> GetAllClientLocation();
     }
 }

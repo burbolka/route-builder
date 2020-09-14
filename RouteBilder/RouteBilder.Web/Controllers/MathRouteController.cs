@@ -19,6 +19,7 @@ namespace RouteBuilder.Web.Controllers
 
     using RouteBuilder.Common.ExtensionMethods;
     using RouteBuilder.Common.Helpers;
+    using RouteBuilder.Common.Interfaces.Models.Address;
     using RouteBuilder.Common.Interfaces.Services;
     using RouteBuilder.Services.LocationFinder.Models;
     using RouteBuilder.Web.Helpers;
@@ -94,78 +95,83 @@ namespace RouteBuilder.Web.Controllers
                 // get stores
                 var stores = this.storeFinder.GetStoresToServe().ToList();
                 var fleets = this.droneService.GetDroneFleets().ToList();
-                var clientAddresses = clientLocations.Value;
+                var clientAddresses = this.locationFinder.GetAllClientLocation().ToList();
 
                 var result = new List<RouteSettings>();
 
                 if (!stores.AnySafe() || !fleets.AnySafe() || !clientAddresses.AnySafe())
                 {
-                    return result;
+                    return null;
                 }
 
                 var calc = new DistanceCalculator();
 
-                var fleetStoreDistance = new List<RouteDistance>();
+                var fleetStoreDistanceArr = new List<List<double>>();
+                var line = new LinkedList<double>();
                 foreach (var fleet in fleets)
                 {
+                    line.Clear();
                     foreach (var store in stores)
                     {
-                        fleetStoreDistance.Add(new RouteDistance
-                        {
-                            LocationFrom = fleet.AddressLine,
-                            LocationFromAddress = fleet,
-                            LocationTo = store.AddressLine,
-                            LocationToAddress = store,
-                            Distance = calc.Calculate(fleet.Coordinates, store.Coordinates)
-                        });
+                        line.AddLast(calc.Calculate(fleet.Coordinates, store.Coordinates));
                     }
+
+                    fleetStoreDistanceArr.Add(line.ToList());
                 }
 
-                // get distance from client to store
-                var storeToClientDistances = new LinkedList<RouteDistance>();
+                var ways = new List<BestWay>();
+                var distance = new List<double>();
                 foreach (var client in clientAddresses)
                 {
+                    distance.Clear();
                     foreach (var store in stores)
                     {
-                        storeToClientDistances.AddLast(
-                            new RouteDistance
-                            {
-                                LocationFrom = store.AddressLine,
-                                LocationFromAddress =
-                                        new AddressItem { AddressLine = store.AddressLine, Coordinates = store.Coordinates },
-                                LocationTo = client.AddressLine,
-                                LocationToAddress =
-                                        new AddressItem { AddressLine = client.AddressLine, Coordinates = client.Coordinates },
-                                Distance = calc.Calculate(client.Coordinates, store.Coordinates)
-                            });
+                        distance.Add(calc.Calculate(client.Coordinates, store.Coordinates));
                     }
 
-                    var availableDrones = this.droneService.GetAvailableDrones();
-                    var nearestStore = storeToClientDistances.OrderBy(x => x.Distance).FirstOrDefault();
-
-                    var nearestFleet = fleetStoreDistance
-                        .Where(x => x.LocationTo.Equals(nearestStore.LocationFrom, StringComparison.InvariantCultureIgnoreCase))
-                        .OrderBy(x => x.Distance)
-                        .FirstOrDefault();
-
-                    var availableDroneNearby = availableDrones.FirstOrDefault(x => x.AddressLine.Equals(
-                        nearestFleet.LocationFrom,
-                        StringComparison.InvariantCultureIgnoreCase));
-
-                    if (availableDroneNearby == null)
+                    var bestWay = new BestWay
+                                      {
+                                          Distance = distance[0] + fleetStoreDistanceArr[0][0],
+                                          FleetIndex = 0,
+                                          StoreIndex = 0,
+                                          Client = client
+                                      };
+                    for (var i = 0; i < fleetStoreDistanceArr.Count; i++)
                     {
-                        var availableDronesDistance = fleetStoreDistance
-                            .Where(x => !x.LocationFrom.Equals(nearestFleet.LocationFrom, StringComparison.InvariantCultureIgnoreCase))
-                            .ToList();
-
-                        nearestFleet = availableDronesDistance
-                            .OrderBy(x => x.Distance)
-                            .FirstOrDefault();
+                        for (var j = 0; j < fleetStoreDistanceArr[i].Count; j++)
+                        {
+                            if (fleetStoreDistanceArr[i][j] + distance[j] < bestWay.Distance)
+                            {
+                                bestWay.Distance = fleetStoreDistanceArr[i][j] + distance[j];
+                                bestWay.FleetIndex = i;
+                                bestWay.StoreIndex = j;
+                            }
+                        }
                     }
 
-                    result.Add(BuildRouteHelper.BuildRouteSettings(calc, nearestFleet, nearestStore));
+                    ways.Add(bestWay);
+                }
 
-                    storeToClientDistances.Clear();
+                foreach (var way in ways)
+                {
+                    result.Add(
+                        BuildRouteHelper.BuildRouteSettings(
+                            calc,
+                            new RouteDistance
+                                {
+                                    LocationFrom = fleets[way.FleetIndex].AddressLine,
+                                    LocationFromAddress = fleets[way.FleetIndex],
+                                    LocationTo = stores[way.StoreIndex].AddressLine,
+                                    LocationToAddress = stores[way.StoreIndex]
+                                },
+                            new RouteDistance
+                                {
+                                    LocationFrom = stores[way.StoreIndex].AddressLine,
+                                    LocationFromAddress = stores[way.StoreIndex],
+                                    LocationTo = way.Client.AddressLine,
+                                    LocationToAddress = way.Client
+                                },
+                            way.Distance));
                 }
 
                 return result;
