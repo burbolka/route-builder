@@ -191,5 +191,92 @@ namespace RouteBuilder.Web.Controllers
 
             return this.Ok(await resultTask);
         }
+
+        /// <summary>
+        /// The get.
+        /// </summary>
+        /// <param name="address">
+        /// The address.
+        /// </param>
+        /// <returns>
+        /// The <see cref="Task"/>.
+        /// </returns>
+        [Route("Get/{address}")]
+        public async Task<IActionResult> Get(string address)
+        {
+            var resultTask = Task<RouteSettings>.Factory.StartNew(() =>
+            {
+                // get stores
+                var stores = this.storeFinder.GetStoresToServe().ToList();
+                var fleets = this.droneService.GetAvailableDrones().ToList();
+                var clientAddress = this.locationFinder.GetAddressCoordinates(address);
+
+                if (!stores.AnySafe() || !fleets.AnySafe() || clientAddress == null)
+                {
+                    return null;
+                }
+
+                var calc = new DistanceCalculator();
+
+                var fleetStoreDistanceArr = new List<List<double>>();
+                var line = new LinkedList<double>();
+                foreach (var fleet in fleets)
+                {
+                    line.Clear();
+                    foreach (var store in stores)
+                    {
+                        line.AddLast(calc.Calculate(fleet.Coordinates, store.Coordinates));
+                    }
+
+                    fleetStoreDistanceArr.Add(line.ToList());
+                }
+
+                var distance = new List<double>();
+                foreach (var store in stores)
+                {
+                    distance.Add(calc.Calculate(clientAddress.Coordinates, store.Coordinates));
+                }
+
+                var bestWay = new BestWay
+                                  {
+                                      Distance = double.MaxValue, FleetIndex = 0, StoreIndex = 0, Client = clientAddress
+                                  };
+
+                for (var i = 0; i < fleetStoreDistanceArr.Count; i++)
+                {
+                    // for loop bellow fleetStoreDistanceArr line length will be the same for all lines,
+                    // so we don't need to calculate it for every line
+                    for (var j = 0; j < fleetStoreDistanceArr[0].Count; j++)
+                    {
+                        if (fleetStoreDistanceArr[i][j] + distance[j] < bestWay.Distance)
+                        {
+                            bestWay.Distance = fleetStoreDistanceArr[i][j] + distance[j];
+                            bestWay.FleetIndex = i;
+                            bestWay.StoreIndex = j;
+                        }
+                    }
+                }
+
+                return BuildRouteHelper.BuildRouteSettings(
+                    calc,
+                    new RouteDistance
+                        {
+                            LocationFrom = fleets[bestWay.FleetIndex].AddressLine,
+                            LocationFromAddress = fleets[bestWay.FleetIndex],
+                            LocationTo = stores[bestWay.StoreIndex].AddressLine,
+                            LocationToAddress = stores[bestWay.StoreIndex]
+                        },
+                    new RouteDistance
+                        {
+                            LocationFrom = stores[bestWay.StoreIndex].AddressLine,
+                            LocationFromAddress = stores[bestWay.StoreIndex],
+                            LocationTo = bestWay.Client.AddressLine,
+                            LocationToAddress = bestWay.Client
+                        },
+                    bestWay.Distance);
+            });
+
+            return this.Ok(await resultTask);
+        }
     }
 }

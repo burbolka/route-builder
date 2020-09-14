@@ -71,6 +71,11 @@ namespace RouteBuilder.Services.LocationFinder
                     return null;
                 }
 
+                if (string.IsNullOrWhiteSpace(addressLine))
+                {
+                    return null;
+                }
+
                 var address = this.settings.Value.FirstOrDefault(
                     x => x.AreEqual(addressLine));
 
