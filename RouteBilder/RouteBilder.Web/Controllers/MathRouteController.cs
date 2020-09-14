@@ -1,9 +1,9 @@
 ﻿// --------------------------------------------------------------------------------------------------------------------
-// <copyright file="RouteController.cs" company="Burbolka LLC">
+// <copyright file="MathRouteController.cs" company="Burbolka LLC">
 //   © Burbolka LLC 2020
 // </copyright>
 // <summary>
-//   The route controller.
+//   Defines the MathRouteController type.
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -12,7 +12,6 @@ namespace RouteBuilder.Web.Controllers
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Security.Cryptography.X509Certificates;
     using System.Threading.Tasks;
 
     using Microsoft.AspNetCore.Mvc;
@@ -24,14 +23,15 @@ namespace RouteBuilder.Web.Controllers
     using RouteBuilder.Services.LocationFinder.Models;
     using RouteBuilder.Web.Helpers;
     using RouteBuilder.Web.Models;
-    using Address = Models.AddressItem;
+
+    using AddressItem = RouteBuilder.Web.Models.AddressItem;
 
     /// <summary>
-    /// The route controller.
+    /// The math route controller.
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    public class RouteController : ControllerBase
+    public class MathRouteController : ControllerBase
     {
         /// <summary>
         /// The drone service.
@@ -54,23 +54,23 @@ namespace RouteBuilder.Web.Controllers
         private IOptions<List<LocationSetting>> clientLocations;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RouteController"/> class.
+        /// Initializes a new instance of the <see cref="MathRouteController"/> class.
         /// </summary>
         /// <param name="droneFinder">
         /// The drone finder.
         /// </param>
         /// <param name="storeFinder">
-        /// The store Finder.
+        /// The store finder.
         /// </param>
         /// <param name="locationFinder">
-        /// The location Finder.
+        /// The location finder.
         /// </param>
         /// <param name="clientLocations">
-        /// The client Locations.
+        /// The client locations.
         /// </param>
-        public RouteController(
-            IDroneFinder droneFinder, 
-            IStoreFinder storeFinder, 
+        public MathRouteController(
+            IDroneFinder droneFinder,
+            IStoreFinder storeFinder,
             ILocationFinder locationFinder,
             IOptions<List<LocationSetting>> clientLocations)
         {
@@ -132,10 +132,10 @@ namespace RouteBuilder.Web.Controllers
                             {
                                 LocationFrom = store.AddressLine,
                                 LocationFromAddress =
-                                        new Address { AddressLine = store.AddressLine, Coordinates = store.Coordinates },
+                                        new AddressItem { AddressLine = store.AddressLine, Coordinates = store.Coordinates },
                                 LocationTo = client.AddressLine,
                                 LocationToAddress =
-                                        new Address { AddressLine = client.AddressLine, Coordinates = client.Coordinates },
+                                        new AddressItem { AddressLine = client.AddressLine, Coordinates = client.Coordinates },
                                 Distance = calc.Calculate(client.Coordinates, store.Coordinates)
                             });
                     }
@@ -170,81 +170,6 @@ namespace RouteBuilder.Web.Controllers
 
                 return result;
             });
-            
-            return this.Ok(await resultTask);
-        }
-
-        /// <summary>
-        /// The get.
-        /// </summary>
-        /// <param name="address">
-        /// The address.
-        /// </param>
-        /// <returns>
-        /// The <see cref="Task"/>.
-        /// </returns>
-        [Route("Get/{address}")]
-        public async Task<IActionResult> Get(string address)
-        {
-            var resultTask = Task<RouteSettings>.Factory.StartNew(
-                () =>
-                    {
-                        // get stores
-                        var stores = this.storeFinder.GetStoresToServe().ToList();
-                        var drones = this.droneService.GetAvailableDrones().ToList();
-
-                        var clientAddress = this.locationFinder.GetAddressCoordinates(address);
-
-                        if (!stores.AnySafe() || !drones.AnySafe() || clientAddress == null)
-                        {
-                            return null;
-                        }
-
-                        var calc = new DistanceCalculator();
-
-                        var storeClientDistance = new List<RouteDistance>();
-                        foreach (var store in stores)
-                        {
-                            storeClientDistance.Add(new RouteDistance
-                            {
-                                LocationFrom = store.AddressLine,
-                                LocationFromAddress = store,
-                                LocationTo = clientAddress.AddressLine,
-                                LocationToAddress = clientAddress,
-                                Distance = calc.Calculate(store.Coordinates, clientAddress.Coordinates)
-                            });
-                        }
-
-                        var nearestStore = storeClientDistance.OrderBy(x => x.Distance).FirstOrDefault();
-
-                        var droneStoreDistance = new List<RouteDistance>();
-                        foreach (var fleet in drones)
-                        {
-                            foreach (var store in stores)
-                            {
-                                if (store.AddressLine.Equals(nearestStore.LocationFrom, StringComparison.InvariantCultureIgnoreCase))
-                                {
-                                    droneStoreDistance.Add(
-                                        new RouteDistance
-                                        {
-                                            LocationFrom = fleet.AddressLine,
-                                            LocationFromAddress = fleet,
-                                            LocationTo = store.AddressLine,
-                                            LocationToAddress = store,
-                                            Distance = calc.Calculate(fleet.Coordinates, store.Coordinates)
-                                        });
-                                    break;
-                                }
-                            }
-                        }
-
-                        var nearestFleet = droneStoreDistance
-                            .Where(x => x.LocationTo.Equals(nearestStore.LocationFrom, StringComparison.CurrentCultureIgnoreCase))
-                            .OrderBy(x => x.Distance)
-                            .FirstOrDefault();
-
-                        return BuildRouteHelper.BuildRouteSettings(calc, nearestFleet, nearestStore);
-                    });
 
             return this.Ok(await resultTask);
         }
