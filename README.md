@@ -1,6 +1,6 @@
 # RouteBuilder web API
 
-Platform: .Net Core 2.1
+Platform: .Net Core 3.1
 
 Web API project created to build route for drone delivery.
 

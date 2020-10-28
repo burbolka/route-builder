@@ -16,7 +16,7 @@ namespace RouteBuilder.Web
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Hosting;
 
     using RouteBuilder.Common.Interfaces.Services;
     using RouteBuilder.Services.DroneFinder;
@@ -37,13 +37,9 @@ namespace RouteBuilder.Web
         /// <param name="configuration">
         /// The configuration.
         /// </param>
-        /// <param name="logger">
-        /// The logger.
-        /// </param>
-        public Startup(IConfiguration configuration, ILoggerFactory logger)
+        public Startup(IConfiguration configuration)
         {
             this.Configuration = configuration;
-            this.LoggerFactory = logger;
         }
 
         /// <summary>
@@ -51,10 +47,6 @@ namespace RouteBuilder.Web
         /// </summary>
         public IConfiguration Configuration { get; }
 
-        /// <summary>
-        /// Gets the logger factory.
-        /// </summary>
-        public ILoggerFactory LoggerFactory { get; }
 
         /// <summary>
         /// The configure services.
@@ -65,7 +57,8 @@ namespace RouteBuilder.Web
         /// </param>
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddControllers();
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
             
             services.Configure<List<DroneLocation>>(
                 options => this.Configuration.GetSection("DroneLocation").Bind(options));
@@ -93,7 +86,7 @@ namespace RouteBuilder.Web
         /// <param name="env">
         /// The env.
         /// </param>
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -104,11 +97,17 @@ namespace RouteBuilder.Web
                 app.UseHsts();
             }
 
+            app.UseRouting();
+
             app.UseCors(builder => builder.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-            app.UseMvc();
+            
+            app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapControllers();
+                });
         }
     }
 }

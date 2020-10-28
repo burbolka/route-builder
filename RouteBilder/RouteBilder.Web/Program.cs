@@ -9,9 +9,11 @@
 
 namespace RouteBuilder.Web
 {
-    using Microsoft.AspNetCore;
+    using System;
+
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.Hosting;
 
     using Serilog;
 
@@ -28,17 +30,22 @@ namespace RouteBuilder.Web
         /// </param>
         public static void Main(string[] args)
         {
-            var configuration = new ConfigurationBuilder()
+            var config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .Build();
 
             Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(configuration)
+                .ReadFrom.Configuration(config)
                 .CreateLogger();
 
             try
             {
-                CreateWebHostBuilder(args).Build().Run();
+                Log.Information("Application Starting.");
+                CreateHostBuilder(args).Build().Run();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "The Application failed to start.");
             }
             finally
             {
@@ -55,9 +62,12 @@ namespace RouteBuilder.Web
         /// <returns>
         /// The <see cref="IWebHostBuilder"/>.
         /// </returns>
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
                 .UseSerilog()
-                .UseStartup<Startup>();
+                .ConfigureWebHostDefaults(webBuilder =>
+                    {
+                        webBuilder.UseStartup<Startup>();
+                    });
     }
 }

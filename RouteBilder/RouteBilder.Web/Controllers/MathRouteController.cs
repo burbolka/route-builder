@@ -30,8 +30,8 @@ namespace RouteBuilder.Web.Controllers
     /// <summary>
     /// The math route controller.
     /// </summary>
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class MathRouteController : ControllerBase
     {
         /// <summary>
