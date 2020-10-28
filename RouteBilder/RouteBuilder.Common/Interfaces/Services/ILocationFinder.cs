@@ -48,5 +48,35 @@ namespace RouteBuilder.Common.Interfaces.Services
         /// The <see cref="IEnumerable{IAddressItem}"/>.
         /// </returns>
         IEnumerable<IAddressItem> GetAllClientLocation();
+
+        /// <summary>
+        /// The get address coordinates async.
+        /// </summary>
+        /// <param name="addressLine">
+        /// The address line.
+        /// </param>
+        /// <returns>
+        /// The <see cref="Task"/>.
+        /// </returns>
+        Task<IAddressItem> GetAddressCoordinatesAsync(string addressLine);
+
+        /// <summary>
+        /// The get address coordinates async.
+        /// </summary>
+        /// <param name="addressLine">
+        /// The address line.
+        /// </param>
+        /// <returns>
+        /// The <see cref="Task"/>.
+        /// </returns>
+        Task<IEnumerable<IAddressItem>> GetAddressCoordinatesAsync(IEnumerable<string> addressLine);
+
+        /// <summary>
+        /// The get all client location async.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="Task"/>.
+        /// </returns>
+        Task<IEnumerable<IAddressItem>> GetAllClientLocationAsync();
     }
 }

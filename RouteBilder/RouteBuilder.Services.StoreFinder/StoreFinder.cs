@@ -77,5 +77,37 @@ namespace RouteBuilder.Services.StoreFinder
 
             return Enumerable.Empty<IAddressItem>();
         }
+
+        /// <summary>
+        /// The get stores to serve.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
+        /// </returns>
+        public async Task<IEnumerable<IAddressItem>> GetStoresToServeAsync()
+        {
+            return await Task<IEnumerable<IAddressItem>>.Factory.StartNew(
+                       () =>
+                           {
+                               try
+                               {
+                                   var availableStores = this.settings.Value;
+                                   if (availableStores.AnySafe())
+                                   {
+                                       return availableStores.Where(x => x.CanServe).Select(
+                                           x => new AddressItem
+                                                    {
+                                                        AddressLine = x.AddressLine, Coordinates = x.Coordinates
+                                                    });
+                                   }
+                               }
+                               catch (Exception e)
+                               {
+                                   this.logger.Log(LogLevel.Error, "something went wrong when try get stores", e);
+                               }
+
+                               return Enumerable.Empty<IAddressItem>();
+                           });
+        }
     }
 }

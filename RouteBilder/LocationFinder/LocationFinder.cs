@@ -10,6 +10,7 @@
 namespace RouteBuilder.Services.LocationFinder
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
@@ -144,6 +145,120 @@ namespace RouteBuilder.Services.LocationFinder
             }
 
             return Enumerable.Empty<IAddressItem>();
+        }
+
+        /// <summary>
+        /// The get address coordinates async.
+        /// </summary>
+        /// <param name="addressLine">
+        /// The address line.
+        /// </param>
+        /// <returns>
+        /// The <see cref="Task"/>.
+        /// </returns>
+        public async Task<IAddressItem> GetAddressCoordinatesAsync(string addressLine)
+        {
+            return await Task<IAddressItem>.Factory.StartNew(
+                       () =>
+                           {
+                               try
+                               {
+                                   if (!this.settings.Value.AnySafe())
+                                   {
+                                       return null;
+                                   }
+
+                                   if (string.IsNullOrWhiteSpace(addressLine))
+                                   {
+                                       return null;
+                                   }
+
+                                   var address = this.settings.Value.FirstOrDefault(x => x.AreEqual(addressLine));
+
+                                   if (address != null)
+                                   {
+                                       return new AddressItem
+                                                  {
+                                                      AddressLine = address.AddressLine,
+                                                      Coordinates = address.Coordinates
+                                                  };
+                                   }
+                               }
+                               catch (Exception e)
+                               {
+                                   this.logger.Log(LogLevel.Error, "something went wrong when try get stores", e);
+                               }
+
+                               return null;
+                           });
+        }
+
+        /// <summary>
+        /// The get address coordinates.
+        /// </summary>
+        /// <param name="addressLine">
+        /// The address line.
+        /// </param>
+        /// <returns>
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
+        /// </returns>
+        public async Task<IEnumerable<IAddressItem>> GetAddressCoordinatesAsync(IEnumerable<string> addressLine)
+        {
+            return await Task<IEnumerable<IAddressItem>>.Factory.StartNew(
+                       () =>
+                           {
+                               try
+                               {
+
+                                   var availableStores = this.settings.Value;
+                                   if (availableStores.AnySafe())
+                                   {
+                                       return availableStores.Where(x => x.AreEqual(addressLine)).Select(
+                                           x => new AddressItem
+                                                    {
+                                                        AddressLine = x.AddressLine, Coordinates = x.Coordinates
+                                                    });
+                                   }
+                               }
+                               catch (Exception e)
+                               {
+                                   this.logger.Log(LogLevel.Error, "something went wrong when try get stores", e);
+                               }
+
+                               return Enumerable.Empty<IAddressItem>();
+                           });
+        }
+
+        /// <summary>
+        /// The get all client location.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
+        /// </returns>
+        public async Task<IEnumerable<IAddressItem>> GetAllClientLocationAsync()
+        {
+            return await Task<IEnumerable<IAddressItem>>.Factory.StartNew(
+                       () =>
+                           {
+                               try
+                               {
+                                   var availableStores = this.settings.Value;
+                                   if (availableStores.AnySafe())
+                                   {
+                                       return availableStores.Select(
+                                           x => new AddressItem
+                                                    {
+                                                        AddressLine = x.AddressLine, Coordinates = x.Coordinates
+                                                    });
+                                   }
+                               }
+                               catch (Exception e)
+                               {
+                                   this.logger.Log(LogLevel.Error, "something went wrong when try get stores", e);
+                               }
+
+                               return Enumerable.Empty<IAddressItem>();
+                           });
         }
     }
 }

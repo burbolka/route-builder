@@ -34,5 +34,21 @@ namespace RouteBuilder.Common.Interfaces.Services
         /// The <see cref="IEnumerable{IAddressItem}"/>.
         /// </returns>
         IEnumerable<IAddressItem> GetAvailableDrones();
+
+        /// <summary>
+        /// The get drone fleets async.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="Task"/>.
+        /// </returns>
+        Task<IEnumerable<IAddressItem>> GetDroneFleetsAsync();
+
+        /// <summary>
+        /// The get available drones async.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="Task"/>.
+        /// </returns>
+        Task<IEnumerable<IAddressItem>> GetAvailableDronesAsync();
     }
 }

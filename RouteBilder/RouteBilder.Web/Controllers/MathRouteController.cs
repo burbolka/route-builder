@@ -90,106 +90,102 @@ namespace RouteBuilder.Web.Controllers
         [Route("GetForAll")]
         public async Task<IActionResult> GetForAll()
         {
-            var resultTask = Task<List<RouteSettings>>.Factory.StartNew(() =>
+            // get stores
+            var stores = this.storeFinder.GetStoresToServe().ToList();
+            var fleets = this.droneService.GetDroneFleets().ToList();
+
+            var clientAddresses = await this.locationFinder.GetAllClientLocationAsync();
+
+            var result = new List<RouteSettings>();
+
+            if (!stores.AnySafe() || !fleets.AnySafe() || !clientAddresses.AnySafe())
             {
-                // get stores
-                var stores = this.storeFinder.GetStoresToServe().ToList();
-                var fleets = this.droneService.GetDroneFleets().ToList();
-                var clientAddresses = this.locationFinder.GetAllClientLocation().ToList();
+                return null;
+            }
 
-                var result = new List<RouteSettings>();
+            var calc = new DistanceCalculator();
 
-                if (!stores.AnySafe() || !fleets.AnySafe() || !clientAddresses.AnySafe())
+            var fleetStoreDistanceArr = new List<List<double>>();
+            var line = new LinkedList<double>();
+            foreach (var fleet in fleets)
+            {
+                line.Clear();
+                foreach (var store in stores)
                 {
-                    return null;
+                    line.AddLast(calc.Calculate(fleet.Coordinates, store.Coordinates));
                 }
 
-                var calc = new DistanceCalculator();
+                fleetStoreDistanceArr.Add(line.ToList());
+            }
 
-                var fleetStoreDistanceArr = new List<List<double>>();
-                var line = new LinkedList<double>();
-                foreach (var fleet in fleets)
+            var ways = new List<BestWay>();
+            var distance = new List<double>();
+            var bestWay = new BestWay();
+            foreach (var client in clientAddresses)
+            {
+                distance.Clear();
+                foreach (var store in stores)
                 {
-                    line.Clear();
-                    foreach (var store in stores)
-                    {
-                        line.AddLast(calc.Calculate(fleet.Coordinates, store.Coordinates));
-                    }
-
-                    fleetStoreDistanceArr.Add(line.ToList());
+                    distance.Add(calc.Calculate(client.Coordinates, store.Coordinates));
                 }
 
-                var ways = new List<BestWay>();
-                var distance = new List<double>();
-                var bestWay = new BestWay();
-                foreach (var client in clientAddresses)
+                bestWay = new BestWay
                 {
-                    distance.Clear();
-                    foreach (var store in stores)
-                    {
-                        distance.Add(calc.Calculate(client.Coordinates, store.Coordinates));
-                    }
+                    Distance = double.MaxValue,
+                    FleetIndex = 0,
+                    StoreIndex = 0,
+                    Client = client
+                };
 
-                    bestWay = new BestWay
-                    {
-                        Distance = double.MaxValue,
-                        FleetIndex = 0,
-                        StoreIndex = 0,
-                        Client = client
-                    };
+                var availableDrones = await this.droneService.GetAvailableDronesAsync();
 
-                    var availableDrones = this.droneService.GetAvailableDrones().ToList();
-
-                    for (var i = 0; i < fleetStoreDistanceArr.Count; i++)
+                for (var i = 0; i < fleetStoreDistanceArr.Count; i++)
+                {
+                    // for loop bellow fleetStoreDistanceArr line length will be the same for all lines,
+                    // so we don't need to calculate it for every line
+                    for (var j = 0; j < fleetStoreDistanceArr[0].Count; j++)
                     {
-                        // for loop bellow fleetStoreDistanceArr line length will be the same for all lines,
-                        // so we don't need to calculate it for every line
-                        for (var j = 0; j < fleetStoreDistanceArr[0].Count; j++)
+                        if (availableDrones.Any(
+                            x => x.AddressLine.Equals(
+                                fleets[i].AddressLine,
+                                StringComparison.InvariantCultureIgnoreCase)))
                         {
-                            if (availableDrones.Exists(
-                                x => x.AddressLine.Equals(
-                                    fleets[i].AddressLine,
-                                    StringComparison.InvariantCultureIgnoreCase)))
+                            if (fleetStoreDistanceArr[i][j] + distance[j] < bestWay.Distance)
                             {
-                                if (fleetStoreDistanceArr[i][j] + distance[j] < bestWay.Distance)
-                                {
-                                    bestWay.Distance = fleetStoreDistanceArr[i][j] + distance[j];
-                                    bestWay.FleetIndex = i;
-                                    bestWay.StoreIndex = j;
-                                }
+                                bestWay.Distance = fleetStoreDistanceArr[i][j] + distance[j];
+                                bestWay.FleetIndex = i;
+                                bestWay.StoreIndex = j;
                             }
                         }
                     }
-
-                    ways.Add(bestWay);
                 }
 
-                foreach (var way in ways)
-                {
-                    result.Add(
-                        BuildRouteHelper.BuildRouteSettings(
-                            calc,
-                            new RouteDistance
-                                {
-                                    LocationFrom = fleets[way.FleetIndex].AddressLine,
-                                    LocationFromAddress = fleets[way.FleetIndex],
-                                    LocationTo = stores[way.StoreIndex].AddressLine,
-                                    LocationToAddress = stores[way.StoreIndex]
-                                },
-                            new RouteDistance
-                                {
-                                    LocationFrom = stores[way.StoreIndex].AddressLine,
-                                    LocationFromAddress = stores[way.StoreIndex],
-                                    LocationTo = way.Client.AddressLine,
-                                    LocationToAddress = way.Client
-                                },
-                            way.Distance));
-                }
+                ways.Add(bestWay);
+            }
 
-                return result;
-            });
+            foreach (var way in ways)
+            {
+                result.Add(
+                    BuildRouteHelper.BuildRouteSettings(
+                        calc,
+                        new RouteDistance
+                        {
+                            LocationFrom = fleets[way.FleetIndex].AddressLine,
+                            LocationFromAddress = fleets[way.FleetIndex],
+                            LocationTo = stores[way.StoreIndex].AddressLine,
+                            LocationToAddress = stores[way.StoreIndex]
+                        },
+                        new RouteDistance
+                        {
+                            LocationFrom = stores[way.StoreIndex].AddressLine,
+                            LocationFromAddress = stores[way.StoreIndex],
+                            LocationTo = way.Client.AddressLine,
+                            LocationToAddress = way.Client
+                        },
+                        way.Distance));
+            }
 
-            return this.Ok(await resultTask);
+            return this.Ok(result);
         }
 
         /// <summary>
@@ -204,79 +200,77 @@ namespace RouteBuilder.Web.Controllers
         [Route("Get/{address}")]
         public async Task<IActionResult> Get(string address)
         {
-            var resultTask = Task<RouteSettings>.Factory.StartNew(() =>
+            // get stores
+            var stores = this.storeFinder.GetStoresToServe().ToList();
+            var fleets = this.droneService.GetAvailableDrones().ToList();
+            var clientAddress = await this.locationFinder.GetAddressCoordinatesAsync(address);
+
+            if (!stores.AnySafe() || !fleets.AnySafe() || clientAddress == null)
             {
-                // get stores
-                var stores = this.storeFinder.GetStoresToServe().ToList();
-                var fleets = this.droneService.GetAvailableDrones().ToList();
-                var clientAddress = this.locationFinder.GetAddressCoordinates(address);
+                return null;
+            }
 
-                if (!stores.AnySafe() || !fleets.AnySafe() || clientAddress == null)
-                {
-                    return null;
-                }
+            var calc = new DistanceCalculator();
 
-                var calc = new DistanceCalculator();
-
-                var fleetStoreDistanceArr = new List<List<double>>();
-                var line = new LinkedList<double>();
-                foreach (var fleet in fleets)
-                {
-                    line.Clear();
-                    foreach (var store in stores)
-                    {
-                        line.AddLast(calc.Calculate(fleet.Coordinates, store.Coordinates));
-                    }
-
-                    fleetStoreDistanceArr.Add(line.ToList());
-                }
-
-                var distance = new List<double>();
+            var fleetStoreDistanceArr = new List<List<double>>();
+            var line = new LinkedList<double>();
+            foreach (var fleet in fleets)
+            {
+                line.Clear();
                 foreach (var store in stores)
                 {
-                    distance.Add(calc.Calculate(clientAddress.Coordinates, store.Coordinates));
+                    line.AddLast(calc.Calculate(fleet.Coordinates, store.Coordinates));
                 }
 
-                var bestWay = new BestWay
-                                  {
-                                      Distance = double.MaxValue, FleetIndex = 0, StoreIndex = 0, Client = clientAddress
-                                  };
+                fleetStoreDistanceArr.Add(line.ToList());
+            }
 
-                for (var i = 0; i < fleetStoreDistanceArr.Count; i++)
+            var distance = new List<double>();
+            foreach (var store in stores)
+            {
+                distance.Add(calc.Calculate(clientAddress.Coordinates, store.Coordinates));
+            }
+
+            var bestWay = new BestWay
+            {
+                Distance = double.MaxValue,
+                FleetIndex = 0,
+                StoreIndex = 0,
+                Client = clientAddress
+            };
+
+            for (var i = 0; i < fleetStoreDistanceArr.Count; i++)
+            {
+                // for loop bellow fleetStoreDistanceArr line length will be the same for all lines,
+                // so we don't need to calculate it for every line
+                for (var j = 0; j < fleetStoreDistanceArr[0].Count; j++)
                 {
-                    // for loop bellow fleetStoreDistanceArr line length will be the same for all lines,
-                    // so we don't need to calculate it for every line
-                    for (var j = 0; j < fleetStoreDistanceArr[0].Count; j++)
+                    if (fleetStoreDistanceArr[i][j] + distance[j] < bestWay.Distance)
                     {
-                        if (fleetStoreDistanceArr[i][j] + distance[j] < bestWay.Distance)
-                        {
-                            bestWay.Distance = fleetStoreDistanceArr[i][j] + distance[j];
-                            bestWay.FleetIndex = i;
-                            bestWay.StoreIndex = j;
-                        }
+                        bestWay.Distance = fleetStoreDistanceArr[i][j] + distance[j];
+                        bestWay.FleetIndex = i;
+                        bestWay.StoreIndex = j;
                     }
                 }
+            }
 
-                return BuildRouteHelper.BuildRouteSettings(
-                    calc,
-                    new RouteDistance
-                        {
-                            LocationFrom = fleets[bestWay.FleetIndex].AddressLine,
-                            LocationFromAddress = fleets[bestWay.FleetIndex],
-                            LocationTo = stores[bestWay.StoreIndex].AddressLine,
-                            LocationToAddress = stores[bestWay.StoreIndex]
-                        },
-                    new RouteDistance
-                        {
-                            LocationFrom = stores[bestWay.StoreIndex].AddressLine,
-                            LocationFromAddress = stores[bestWay.StoreIndex],
-                            LocationTo = bestWay.Client.AddressLine,
-                            LocationToAddress = bestWay.Client
-                        },
-                    bestWay.Distance);
-            });
-
-            return this.Ok(await resultTask);
+            return this.Ok(BuildRouteHelper.BuildRouteSettings(
+                calc,
+                new RouteDistance
+                {
+                    LocationFrom = fleets[bestWay.FleetIndex].AddressLine,
+                    LocationFromAddress = fleets[bestWay.FleetIndex],
+                    LocationTo = stores[bestWay.StoreIndex].AddressLine,
+                    LocationToAddress = stores[bestWay.StoreIndex]
+                },
+                new RouteDistance
+                {
+                    LocationFrom = stores[bestWay.StoreIndex].AddressLine,
+                    LocationFromAddress = stores[bestWay.StoreIndex],
+                    LocationTo = bestWay.Client.AddressLine,
+                    LocationToAddress = bestWay.Client
+                },
+                bestWay.Distance));
         }
     }
 }

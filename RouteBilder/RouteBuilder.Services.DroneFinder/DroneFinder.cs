@@ -101,5 +101,60 @@ namespace RouteBuilder.Services.DroneFinder
 
             return Enumerable.Empty<IAddressItem>();
         }
+
+        /// <summary>
+        /// The get drone fleets.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
+        /// </returns>
+        public async Task<IEnumerable<IAddressItem>> GetDroneFleetsAsync()
+        {
+            var resultTask = Task<List<AddressItem>>.Factory.StartNew(() =>
+            {
+                var result = new List<AddressItem>();
+                try
+                {
+                    result = this.settings.Value.Select(
+                        x => new AddressItem { AddressLine = x.AddressLine, Coordinates = x.Coordinates }).ToList();
+                }
+                catch (Exception e)
+                {
+                    this.logger.Log(LogLevel.Error, "something went wrong when try get available drones", e);
+                }
+
+                return result;
+            });
+
+            return await resultTask;
+        }
+
+        /// <summary>
+        /// The get available drones.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="IEnumerable{IAddressItem}"/>.
+        /// </returns>
+        public async Task<IEnumerable<IAddressItem>> GetAvailableDronesAsync()
+        {
+            var resultTask = Task<List<AddressItem>>.Factory.StartNew(() =>
+            {
+                var result = new List<AddressItem>();
+                try
+                {
+                    var availableDrones = this.settings.Value;
+                    result = availableDrones.Where(x => x.HasDrones).Select(
+                        x => new AddressItem { AddressLine = x.AddressLine, Coordinates = x.Coordinates }).ToList();
+                }
+                catch (Exception e)
+                {
+                    this.logger.Log(LogLevel.Error, "something went wrong when try get available drones", e);
+                }
+
+                return result;
+            });
+
+            return await resultTask;
+        }
     }
 }
